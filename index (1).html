@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#0d0d12">
+  <title>Моя Волна</title>
+  <style>
+    :root { --bg: #0d0d12; --card: #181822; --accent: #ff4757; --glow: rgba(255, 71, 87, 0.45); --text: #fff; --sub: #9494a8; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; padding: 16px 18px 80px; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .logo { font-size: 20px; font-weight: 800; }
+    .logo span { color: var(--accent); }
+    .badge { font-size: 11px; background: var(--card); padding: 5px 11px; border-radius: 20px; color: #2ed573; border: 1px solid #262636; font-weight: 700; }
+    .screen { display: none; flex: 1; flex-direction: column; }
+    .screen.active { display: flex; }
+    .wave-btn { width: 145px; height: 145px; border-radius: 50%; border: none; margin: 6px auto 18px; background: radial-gradient(circle at 30% 30%, #ff6b81, #ff4757, #b31224); color: #fff; font-size: 17px; font-weight: 800; box-shadow: 0 0 35px var(--glow); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: transform 0.15s; }
+    .wave-btn:active { transform: scale(0.95); }
+    .wave-btn.playing { animation: pulse 2s infinite ease-in-out; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); box-shadow: 0 0 55px rgba(255, 71, 87, 0.8); } }
+    .box { background: var(--card); border-radius: 20px; padding: 14px; margin-bottom: 14px; border: 1px solid #232332; }
+    .lbl { font-size: 11px; color: var(--sub); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 7px; font-weight: 700; }
+    .seg { display: flex; background: #101018; border-radius: 12px; padding: 4px; margin-bottom: 11px; }
+    .seg button { flex: 1; background: none; border: none; color: var(--sub); padding: 7px; font-size: 12px; font-weight: 600; border-radius: 9px; cursor: pointer; }
+    .seg button.act { background: var(--accent); color: #fff; }
+    .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { background: #101018; border: 1px solid #2a2a3c; color: var(--text); padding: 6px 13px; border-radius: 20px; font-size: 12px; white-space: nowrap; cursor: pointer; }
+    .chip.act { background: #fff; color: #000; font-weight: 700; }
+    .player { background: var(--card); border-radius: 22px; padding: 16px; border: 1px solid #252536; margin-top: auto; }
+    .t-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .cover { width: 54px; height: 54px; border-radius: 12px; background: #262638; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; overflow: hidden; }
+    .meta { flex: 1; overflow: hidden; }
+    .title { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .artist { font-size: 13px; color: var(--sub); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .status { font-size: 11px; color: #2ed573; margin-top: 3px; font-weight: 600; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); height: 5px; cursor: pointer; }
+    .times { display: flex; justify-content: space-between; font-size: 11px; color: var(--sub); margin: 4px 0 12px; }
+    .ctrls { display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
+    .c-btn { background: none; border: none; color: var(--text); font-size: 21px; cursor: pointer; padding: 8px; }
+    .c-btn.main { width: 50px; height: 50px; border-radius: 50%; background: #fff; color: #000; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+    .fx { display: flex; gap: 8px; margin-top: 12px; border-top: 1px solid #242434; padding-top: 10px; }
+    .fx button { flex: 1; background: #101018; border: 1px solid #2a2a3c; color: var(--sub); padding: 7px; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .fx button.act { border-color: var(--accent); color: #fff; background: rgba(255,71,87,0.15); }
+    .inp { width: 100%; background: var(--card); border: 1px solid #2c2c3e; color: #fff; padding: 12px; border-radius: 14px; font-size: 14px; margin-bottom: 10px; outline: none; }
+    .act-btn { width: 100%; background: var(--accent); color: #fff; border: none; padding: 13px; border-radius: 14px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 14px; }
+    .item { background: var(--card); padding: 11px 14px; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 10px; }
+    .item-info { flex: 1; overflow: hidden; cursor: pointer; }
+    .item-info b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
+    .item-info span { display: block; font-size: 12px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    nav { position: fixed; bottom: 0; left: 0; right: 0; background: #12121a; border-top: 1px solid #222230; display: flex; height: 64px; z-index: 50; }
+    nav button { flex: 1; background: none; border: none; color: var(--sub); font-size: 11px; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; }
+    nav button.act { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">Моя <span>Волна</span></div>
+    <div class="badge" id="bufBadge">Буфер: 0 / 5</div>
+  </header>
+
+  <div class="screen active" id="s-wave">
+    <button class="wave-btn" id="waveBtn" onclick="startWave()"><span style="font-size:26px">▶</span><span>Моя волна</span></button>
+    <div class="box">
+      <div class="lbl">Степень новизны</div>
+      <div class="seg">
+        <button onclick="setOpt('nov','fam',this)">Знакомое</button>
+        <button class="act" onclick="setOpt('nov','bal',this)">Баланс</button>
+        <button onclick="setOpt('nov','new',this)">Открытия</button>
+      </div>
+      <div class="lbl">Язык треков</div>
+      <div class="seg">
+        <button class="act" onclick="setOpt('lang','all',this)">Все языки</button>
+        <button onclick="setOpt('lang','ru',this)">Только русский</button>
+      </div>
+      <div class="lbl">Эпоха / Жанр</div>
+      <div class="chips" id="genres">
+        <div class="chip act" onclick="setGen('my',this)">Мой вкус</div>
+        <div class="chip" onclick="setGen('80s hits',this)">80-е</div>
+        <div class="chip" onclick="setGen('90s hits',this)">90-е</div>
+        <div class="chip" onclick="setGen('2000s hits',this)">2000-е</div>
+        <div class="chip" onclick="setGen('русский рок',this)">Русский рок</div>
+        <div class="chip" onclick="setGen('phonk',this)">Phonk</div>
+        <div class="chip" onclick="addGen()">+ Свой</div>
+      </div>
+    </div>
+
+    <div class="player">
+      <div class="t-row">
+        <div class="cover" id="cov">🎵</div>
+        <div class="meta">
+          <div class="title" id="tit">Нажми «Моя волна»</div>
+          <div class="artist" id="art">Хиты 1980–2010 и твой вкус</div>
+          <div class="status" id="stat">Гибридный движок готов</div>
+        </div>
+      </div>
+      <input type="range" id="seek" value="0" min="0" max="100" step="0.1" oninput="seekDrag(this.value)" onchange="seekCommit(this.value)">
+      <div class="times"><span id="cTime">0:00</span><span id="dTime">0:00</span></div>
+      <div class="ctrls">
+        <button class="c-btn" onclick="dislike()" title="Не нравится">👎</button>
+        <button class="c-btn" onclick="prevTrack()" title="Назад">⏮</button>
+        <button class="c-btn main" id="ppBtn" onclick="togglePlay()">▶</button>
+        <button class="c-btn" onclick="nextTrack()" title="Дальше">⏭</button>
+        <button class="c-btn" id="likeBtn" onclick="like()" title="В избранное">🤍</button>
+      </div>
+      <div class="fx">
+        <button class="act" onclick="setSpd(1,true,this)">Обычный</button>
+        <button onclick="setSpd(0.85,false,this)">Slowed</button>
+        <button onclick="setSpd(1.2,false,this)">Speed Up</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" id="s-search">
+    <div class="lbl">Поиск по артисту и названию</div>
+    <div style="display:flex;gap:8px">
+      <input class="inp" id="qInp" placeholder="Кино - Группа крови...">
+      <button class="act-btn" style="width:auto;padding:0 16px" onclick="doSearch()">Найти</button>
+    </div>
+    <div id="clearSearchWrap" style="display:none;margin-bottom:10px;">
+      <button onclick="clearSearch()" style="background:none;border:none;color:var(--sub);font-size:12px;text-decoration:underline;cursor:pointer;">Очистить результаты</button>
+    </div>
+    <div id="resList" style="margin-bottom:16px"></div>
+
+    <div class="lbl">Перенос плейлиста (сразу в Избранное)</div>
+    <textarea class="inp" id="impInp" style="min-height:95px" placeholder="Вставь список треков (каждый с новой строки):&#10;Кино - Группа крови&#10;Modern Talking - Cheri Cheri Lady"></textarea>
+    <button class="act-btn" onclick="doImport()">Импортировать в Избранное</button>
+  </div>
+
+  <div class="screen" id="s-fav">
+    <div class="lbl">Избранное (Основа Моей волны)</div>
+    <div id="favList"></div>
+  </div>
+
+  <nav>
+    <button class="act" onclick="tab('wave',this)">🌊<span>Моя волна</span></button>
+    <button onclick="tab('search',this)">📥<span>Поиск и Импорт</span></button>
+    <button onclick="tab('fav',this)">❤️<span>Избранное</span></button>
+  </nav>
+
+  <audio id="au"></audio>
+
+<script>
+  const st = {
+    nov: 'bal', lang: 'all', gen: 'my',
+    playing: false, cur: null, history: [], queue: [],
+    spd: 1, pitch: true, dragging: false, filling: false,
+    likes: JSON.parse(localStorage.getItem('mw_likes') || '[]'),
+    dislikes: JSON.parse(localStorage.getItem('mw_dis') || '[]'),
+    defaultSeeds: [
+      { title: 'Группа крови', artist: 'Кино', artistId: 12937 },
+      { title: 'Cheri Cheri Lady', artist: 'Modern Talking', artistId: 4937 },
+      { title: '18 мне уже', artist: 'Руки Вверх!', artistId: 584152 },
+      { title: 'Enjoy the Silence', artist: 'Depeche Mode', artistId: 554 },
+      { title: 'Лирика', artist: 'Сектор Газа', artistId: 468184 },
+      { title: 'Bohemian Rhapsody', artist: 'Queen', artistId: 412 }
+    ]
+  };
+
+  const au = document.getElementById('au');
+  const log = t => document.getElementById('stat').innerText = t;
+  const updBufBadge = () => document.getElementById('bufBadge').innerText = `Буфер: ${st.queue.length} / 5`;
+
+  function isRu(t, a) {
+    const s = (t + ' ' + a).toLowerCase();
+    return /[а-яё]/.test(s) || ['kino','кино','ruki vverh','сектор газа','korol i shut','nautilus','ddt','agata kristi','bi-2','zemfira','tatu','laskoviy may','mirage','kombinaciya'].some(k => s.includes(k));
+  }
+
+  // Быстрый JSONP-мост к Deezer API (работает в РФ без CORS и без лимитов iTunes)
+  function dzJsonp(endpoint) {
+    return new Promise((resolve) => {
+      const cb = 'dz_cb_' + Math.random().toString(36).slice(2);
+      const script = document.createElement('script');
+      const timer = setTimeout(() => { cleanup(); resolve(null); }, 4000);
+      function cleanup() { clearTimeout(timer); delete window[cb]; script.remove(); }
+      window[cb] = (data) => { cleanup(); resolve(data); };
+      script.src = `https://api.deezer.com${endpoint}${endpoint.includes('?') ? '&' : '?'}output=jsonp&callback=${cb}`;
+      script.onerror = () => { cleanup(); resolve(null); };
+      document.body.appendChild(script);
+    });
+  }
+
+  // Параллельный поиск полного потока на открытых зеркалах Piped (YouTube Audio)
+  const PIPED_NODES = [
+    'https://pipedapi.kavin.rocks',
+    'https://pipedapi.tokhmi.xyz',
+    'https://api.piped.projectsegfau.lt',
+    'https://pipedapi.smnz.de'
+  ];
+
+  async function resolveFullAudio(artist, title, fallbackPreview) {
+    const query = `${artist} - ${title} audio`;
+    const controllers = PIPED_NODES.map(() => new AbortController());
+    try {
+      const promises = PIPED_NODES.map(async (node, idx) => {
+        const res = await fetch(`${node}/search?q=${encodeURIComponent(query)}&filter=music_songs`, { signal: controllers[idx].signal });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const item = (data.items || []).find(x => x.url && x.duration > 60 && x.duration < 600);
+        if (!item) throw new Error();
+        const vidId = item.url.split('v=')[1];
+        const sRes = await fetch(`${node}/streams/${vidId}`, { signal: controllers[idx].signal });
+        if (!sRes.ok) throw new Error();
+        const sData = await sRes.json();
+        const audioStream = (sData.audioStreams || []).sort((a, b) => b.bitrate - a.bitrate)[0];
+        if (!audioStream || !audioStream.url) throw new Error();
+        return audioStream.url;
+      });
+      const fastestUrl = await Promise.any(promises);
+      controllers.forEach(c => c.abort());
+      return { url: fastestUrl, isFull: true };
+    } catch (e) {
+      controllers.forEach(c => c.abort());
+      return { url: fallbackPreview, isFull: false };
+    }
+  }
+
+  // Умный генератор рекомендаций на основе графа похожих артистов Deezer
+  async function generateCandidate() {
+    if (st.gen !== 'my') {
+      const q = st.lang === 'ru' ? `${st.gen} русский` : st.gen;
+      const res = await dzJsonp(`/search?q=${encodeURIComponent(q)}&limit=30`);
+      const items = (res?.data || []).filter(x => x.preview && (st.lang !== 'ru' || isRu(x.title, x.artist.name)));
+      const pick = items[Math.floor(Math.random() * items.length)];
+      if (!pick) return null;
+      return { title: pick.title, artist: pick.artist.name, artistId: pick.artist.id, cover: pick.album.cover_medium, preview: pick.preview };
+    }
+
+    const basePool = st.likes.length ? st.likes : st.defaultSeeds;
+    const seed = basePool[Math.floor(Math.random() * basePool.length)];
+
+    // Режим "Знакомое" — берем треки из избранного или того же артиста
+    if (st.nov === 'fam' && st.likes.length >= 3) {
+      const fav = st.likes[Math.floor(Math.random() * st.likes.length)];
+      return { ...fav };
+    }
+
+    // Режим "Баланс" или "Открытия" — ищем похожих артистов через граф Deezer
+    let targetArtist = seed.artist;
+    if (seed.artistId && (st.nov === 'new' || Math.random() > 0.35)) {
+      const rel = await dzJsonp(`/artist/${seed.artistId}/related?limit=15`);
+      let artists = rel?.data || [];
+      if (st.lang === 'ru') artists = artists.filter(a => isRu('', a.name));
+      if (artists.length) {
+        targetArtist = artists[Math.floor(Math.random() * artists.length)].name;
+      }
+    }
+
+    const searchRes = await dzJsonp(`/search?q=artist:"${encodeURIComponent(targetArtist)}"&limit=20`);
+    let tracks = (searchRes?.data || []).filter(x => {
+      const id = `${x.artist.name} - ${x.title}`;
+      if (st.dislikes.includes(id)) return false;
+      if (st.lang === 'ru' && !isRu(x.title, x.artist.name)) return false;
+      if (st.nov === 'new' && st.likes.some(l => l.title === x.title)) return false;
+      return x.preview;
+    });
+
+    if (!tracks.length) {
+      const fallback = await dzJsonp(`/search?q=${encodeURIComponent(seed.artist + ' ' + seed.title)}&limit=15`);
+      tracks = (fallback?.data || []).filter(x => x.preview);
+    }
+
+    const chosen = tracks[Math.floor(Math.random() * tracks.length)];
+    if (!chosen) return null;
+    return { title: chosen.title, artist: chosen.artist.name, artistId: chosen.artist.id, cover: chosen.album.cover_medium, preview: chosen.preview };
+  }
+
+  // Фоновое заполнение буфера на 5 треков вперед
+  async function fillBuffer() {
+    if (st.filling || st.queue.length >= 5) return;
+    st.filling = true;
+    while (st.queue.length < 5) {
+      try {
+        const cand = await generateCandidate();
+        if (!cand) break;
+        if (st.queue.some(q => q.title === cand.title) || (st.cur && st.cur.title === cand.title)) continue;
+        const stream = await resolveFullAudio(cand.artist, cand.title, cand.preview);
+        if (stream.url) {
+          st.queue.push({ ...cand, url: stream.url, isFull: stream.isFull });
+          updBufBadge();
+        }
+      } catch (e) { break; }
+    }
+    st.filling = false;
+  }
+
+  async function startWave() {
+    if (st.cur) return togglePlay();
+    log('Запускаю Мою волну...');
+    await nextTrack();
+  }
+
+  function playTrackObj(t) {
+    if (st.cur && st.cur.url !== t.url) {
+      st.history.push(st.cur);
+      if (st.history.length > 30) st.history.shift();
+    }
+    st.cur = t;
+    au.src = t.url;
+    au.playbackRate = st.spd;
+    au.preservesPitch = st.pitch;
+    au.play().then(() => {
+      st.playing = true;
+      ui();
+      log(t.isFull ? 'Играет полная версия (HD)' : 'Играет (резервный поток)');
+    }).catch(() => {
+      // Если полный поток не открылся в браузере, мгновенно переключаем на резервный preview
+      if (t.isFull && t.preview) {
+        t.url = t.preview;
+        t.isFull = false;
+        au.src = t.preview;
+        au.play();
+        st.playing = true;
+        ui();
+        log('Играет (резервный поток)');
+      }
+    });
+    updateMediaSession(t);
+    fillBuffer();
+  }
+
+  // Мгновенное переключение без блокировок
+  async function nextTrack() {
+    if (st.queue.length > 0) {
+      const next = st.queue.shift();
+      updBufBadge();
+      playTrackObj(next);
+    } else {
+      log('Быстрый подбор трека...');
+      const cand = await generateCandidate();
+      if (!cand) return log('Попробуй нажать ещё раз');
+      const stream = await resolveFullAudio(cand.artist, cand.title, cand.preview);
+      playTrackObj({ ...cand, url: stream.url, isFull: stream.isFull });
+    }
+  }
+
+  function prevTrack() {
+    if (au.currentTime > 4) {
+      au.currentTime = 0;
+      return;
+    }
+    if (st.history.length > 0) {
+      if (st.cur) st.queue.unshift(st.cur);
+      updBufBadge();
+      const prev = st.history.pop();
+      st.cur = null;
+      playTrackObj(prev);
+    } else {
+      au.currentTime = 0;
+    }
+  }
+
+  function togglePlay() {
+    if (!au.src) return startWave();
+    if (au.paused) { au.play(); st.playing = true; }
+    else { au.pause(); st.playing = false; }
+    ui();
+  }
+
+  // Плавная перемотка в обе стороны
+  au.ontimeupdate = () => {
+    if (st.dragging) return;
+    const c = au.currentTime || 0, d = au.duration || 1;
+    document.getElementById('seek').value = (c / d) * 100;
+    document.getElementById('cTime').innerText = fmt(c);
+    document.getElementById('dTime').innerText = fmt(d);
+  };
+  au.onended = () => nextTrack();
+
+  function seekDrag(v) {
+    st.dragging = true;
+    if (au.duration) document.getElementById('cTime').innerText = fmt((v / 100) * au.duration);
+  }
+  function seekCommit(v) {
+    if (au.duration) au.currentTime = (v / 100) * au.duration;
+    st.dragging = false;
+  }
+
+  const setSpd = (r, pt, b) => {
+    st.spd = r; st.pitch = pt;
+    au.playbackRate = r; au.preservesPitch = pt;
+    document.querySelectorAll('.fx button').forEach(x => x.className = '');
+    b.className = 'act';
+  };
+
+  const setOpt = (k, v, b) => {
+    st[k] = v;
+    b.parentElement.querySelectorAll('button').forEach(x => x.className = '');
+    b.className = 'act';
+    st.queue = []; updBufBadge();
+    if (st.playing) fillBuffer();
+  };
+
+  const setGen = (v, b) => {
+    st.gen = v;
+    document.querySelectorAll('.chip').forEach(x => x.className = 'chip');
+    b.className = 'chip act';
+    st.queue = []; updBufBadge();
+    if (st.playing) fillBuffer();
+  };
+
+  function addGen() {
+    const g = prompt('Введи жанр, год (например 1995) или артиста:');
+    if (g && g.trim()) {
+      st.gen = g.trim();
+      document.querySelectorAll('.chip').forEach(x => x.className = 'chip');
+      const d = document.createElement('div');
+      d.className = 'chip act'; d.innerText = g.trim();
+      d.onclick = () => setGen(g.trim(), d);
+      document.getElementById('genres').prepend(d);
+      st.queue = []; updBufBadge();
+      if (st.playing) fillBuffer();
+    }
+  }
+
+  function like() {
+    if (!st.cur) return;
+    const idx = st.likes.findIndex(x => x.title === st.cur.title && x.artist === st.cur.artist);
+    if (idx === -1) {
+      st.likes.unshift(st.cur);
+      st.queue = []; updBufBadge(); fillBuffer();
+    } else {
+      st.likes.splice(idx, 1);
+    }
+    localStorage.setItem('mw_likes', JSON.stringify(st.likes));
+    ui(); renderFav();
+  }
+
+  function dislike() {
+    if (!st.cur) return;
+    st.dislikes.push(`${st.cur.artist} - ${st.cur.title}`);
+    localStorage.setItem('mw_dis', JSON.stringify(st.dislikes));
+    nextTrack();
+  }
+
+  // Поиск по артисту и названию (не влияет на волну без лайка)
+  async function doSearch() {
+    const q = document.getElementById('qInp').value.trim();
+    if (!q) return;
+    const box = document.getElementById('resList');
+    box.innerHTML = '<div style="color:var(--sub);font-size:13px">Ищу треки...</div>';
+    document.getElementById('clearSearchWrap').style.display = 'block';
+
+    const res = await dzJsonp(`/search?q=${encodeURIComponent(q)}&limit=15`);
+    const items = (res?.data || []).filter(x => x.preview);
+    box.innerHTML = items.length ? '' : '<div style="color:var(--sub);font-size:13px">Ничего не найдено</div>';
+
+    items.forEach(item => {
+      const t = { title: item.title, artist: item.artist.name, artistId: item.artist.id, cover: item.album.cover_medium, preview: item.preview };
+      const d = document.createElement('div');
+      d.className = 'item';
+      d.innerHTML = `<div class="item-info"><b>${t.title}</b><span>${t.artist}</span></div><button class="c-btn" style="font-size:16px">▶</button>`;
+      d.onclick = async () => {
+        tab('wave', document.querySelector('nav button'));
+        log('Загружаю выбранный трек...');
+        const stream = await resolveFullAudio(t.artist, t.title, t.preview);
+        playTrackObj({ ...t, url: stream.url, isFull: stream.isFull });
+      };
+      box.appendChild(d);
+    });
+  }
+
+  function clearSearch() {
+    document.getElementById('qInp').value = '';
+    document.getElementById('resList').innerHTML = '';
+    document.getElementById('clearSearchWrap').style.display = 'none';
+  }
+
+  // Импорт плейлиста сразу в Избранное
+  async function doImport() {
+    const lines = document.getElementById('impInp').value.split('\n').map(x => x.trim()).filter(x => x.length > 2);
+    if (!lines.length) return alert('Вставь список песен!');
+    const btn = event.target;
+    btn.innerText = `Импортирую (0 / ${lines.length})...`;
+    btn.disabled = true;
+
+    let added = 0;
+    for (let i = 0; i < lines.length; i++) {
+      btn.innerText = `Импортирую (${i + 1} / ${lines.length})...`;
+      const res = await dzJsonp(`/search?q=${encodeURIComponent(lines[i])}&limit=1`);
+      const item = res?.data?.[0];
+      if (item && item.preview) {
+        const exists = st.likes.some(l => l.title === item.title && l.artist === item.artist.name);
+        if (!exists) {
+          st.likes.unshift({
+            title: item.title, artist: item.artist.name, artistId: item.artist.id,
+            cover: item.album.cover_medium, preview: item.preview, url: item.preview
+          });
+          added++;
+        }
+      }
+    }
+
+    localStorage.setItem('mw_likes', JSON.stringify(st.likes));
+    document.getElementById('impInp').value = '';
+    btn.innerText = 'Импортировать в Избранное';
+    btn.disabled = false;
+    st.queue = []; updBufBadge(); fillBuffer();
+    alert(`Добавлено в Избранное: ${added} из ${lines.length} треков!`);
+    tab('fav', document.querySelectorAll('nav button')[2]);
+  }
+
+  function renderFav() {
+    const box = document.getElementById('favList');
+    box.innerHTML = st.likes.length ? '' : '<div style="color:var(--sub);font-size:13px">Пока пусто. Ставь ❤️ или импортируй плейлист!</div>';
+    st.likes.forEach((t, idx) => {
+      const d = document.createElement('div');
+      d.className = 'item';
+      d.innerHTML = `<div class="item-info"><b>${t.title}</b><span>${t.artist}</span></div><button class="c-btn" style="font-size:14px;color:var(--sub)" onclick="removeFav(${idx})">✕</button>`;
+      d.querySelector('.item-info').onclick = async () => {
+        tab('wave', document.querySelector('nav button'));
+        log('Загружаю из избранного...');
+        const stream = await resolveFullAudio(t.artist, t.title, t.preview || t.url);
+        playTrackObj({ ...t, url: stream.url, isFull: stream.isFull });
+      };
+      box.appendChild(d);
+    });
+  }
+
+  function removeFav(idx) {
+    st.likes.splice(idx, 1);
+    localStorage.setItem('mw_likes', JSON.stringify(st.likes));
+    renderFav();
+  }
+
+  function tab(id, b) {
+    if (id !== 'search') clearSearch();
+    document.querySelectorAll('.screen').forEach(x => x.className = 'screen');
+    document.getElementById('s-' + id).className = 'screen active';
+    document.querySelectorAll('nav button').forEach(x => x.className = '');
+    b.className = 'act';
+    if (id === 'fav') renderFav();
+  }
+
+  function ui() {
+    document.getElementById('waveBtn').className = 'wave-btn' + (st.playing ? ' playing' : '');
+    document.getElementById('ppBtn').innerText = st.playing ? '⏸' : '▶';
+    if (st.cur) {
+      document.getElementById('tit').innerText = st.cur.title;
+      document.getElementById('art').innerText = st.cur.artist;
+      document.getElementById('cov').innerHTML = st.cur.cover ? `<img src="${st.cur.cover}" style="width:100%;height:100%;object-fit:cover">` : '🎵';
+      const liked = st.likes.some(x => x.title === st.cur.title && x.artist === st.cur.artist);
+      document.getElementById('likeBtn').innerText = liked ? '❤️' : '🤍';
+    }
+  }
+
+  function updateMediaSession(t) {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: t.title, artist: t.artist,
+        artwork: t.cover ? [{ src: t.cover, sizes: '250x250', type: 'image/jpeg' }] : []
+      });
+      navigator.mediaSession.setActionHandler('play', togglePlay);
+      navigator.mediaSession.setActionHandler('pause', togglePlay);
+      navigator.mediaSession.setActionHandler('previoustrack', prevTrack);
+      navigator.mediaSession.setActionHandler('nexttrack', nextTrack);
+    }
+  }
+
+  const fmt = s => Math.floor(s / 60) + ':' + (Math.floor(s % 60) < 10 ? '0' : '') + Math.floor(s % 60);
+  renderFav();
+  fillBuffer();
+</script>
+</body>
+</html>
